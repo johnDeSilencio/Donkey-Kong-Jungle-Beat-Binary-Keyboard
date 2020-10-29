@@ -151,22 +151,49 @@ if len(text_editor_buffer) % 4 != 0 or len(current_byte) > 0:
 	print("Exiting...")
 	exit(0)
 
-# Write ARM instructions to pre-assembled object file with large NOP region
+new_instructions = text_editor_buffer
+length = len(new_instructions)
+
+# Write ARM instructions to pre-assembled object file with simple return statement in main function
+source_file = open("bongos.s", "r")
+contents = source_file.read()
+source_file.close()
+
+# Add one NOP instruction for each new instruction
+contents = contents[:30] + "\tnop\n"*len(new_instructions) + contents[30:]
+
+source_file = open("bongos.s", "w")
+source_file.write(contents)
+source_file.close()
+
 os.system("as -mfpu=vfpv2 -o bongos.o bongos.s")
+os.system("strip --strip-unneeded bongos.o")
+
+# Overwrite NOP instructions with new instructions
 
 obj_file = open("bongos.o", "rb")
 contents = obj_file.read()
-before_nop_region = contents[:64] # NOP region begins at 64th byte
-after_nop_region = contents[64:]
 obj_file.close()
 
+instruction_region_offset = 52
+contents = contents[:instruction_region_offset] + new_instructions + contents[instruction_region_offset+len(new_instructions):]
+
 obj_file = open("bongos.o", "wb")
-new_instructions = text_editor_buffer
-obj_file.write(before_nop_region)
-obj_file.write(new_instructions)
-obj_file.write(after_nop_region[len(new_instructions):])
+obj_file.write(contents)
 obj_file.close()
 
 # Link object file and run
 os.system("gcc -o bongos.out bongos.o")
 os.system("./bongos.out; echo $?")
+
+# Reset bongos.s source file
+source_file = open("bongos.s", "r")
+contents = source_file.read()
+source_file.close()
+
+contents = contents[:30] + contents[30+len("\tnop\n")*len(new_instructions):]
+
+source_file = open("bongos.s", "w")
+source_file.write(contents)
+source_file.close()
+
