@@ -1,9 +1,17 @@
 #!/usr/bin/python3
 
+import sys
 import os
 from time import monotonic, strftime, sleep
 
+if (len(sys.argv) < 2):
+	print("Error: Please specify the device file of your")
+	print("DK Bongo Drums. For example:\n")
+	print("\tsudo python3 bongos.py /dev/hidraw2\n")
+	print("Exiting...")
+	exit(1)
 
+bongo_dev_file = sys.argv[1]
 
 """
 	Given an array of bytes and a string
@@ -35,7 +43,7 @@ def reprint(byte_array, current_byte):
 # amount of time until bongo will register hit again
 bongo_clap_length = 0.2
 
-bongos = open("/dev/hidraw2", "rb")
+bongos = open(bongo_dev_file, "rb")
 hid_buffer = ""
 last_bongo_clap = monotonic()
 
