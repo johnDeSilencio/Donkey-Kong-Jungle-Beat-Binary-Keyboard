@@ -39,6 +39,26 @@ def reprint(byte_array, current_byte):
 	print(current_byte)
 
 
+def ip_checksum(packet_bytearray):
+    bytes_left = len(packet_bytearray)
+    sum = 0
+
+    # add header bytes to sum two bytes at a time
+    while (bytes_left > 1):
+        lower_short_boundary = len(packet_bytearray) - bytes_left
+        upper_short_boundary = len(packet_bytearray) - bytes_left + 2
+        sum += int(packet_bytearray[lower_short_boundary:upper_short_boundary].hex(), 16)
+        bytes_left -= 2    # process two bytes at a time
+
+    # if there is one byte left, make sure to add it too
+    if (bytes_left == 1):
+        sum += int(packet_bytearray[-1:].hex(), 16)
+
+    # add back carry outs from the top 16 bits to the bottom 16 bits
+    sum = (sum >> 16) + (sum & 0xffff)
+    sum += (sum >> 16)
+    return ~sum
+
 
 # amount of time until bongo will register hit again
 bongo_clap_length = 0.2
