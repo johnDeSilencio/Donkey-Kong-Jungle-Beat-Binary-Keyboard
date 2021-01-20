@@ -111,7 +111,7 @@ while True:
 			current_byte = ""
 
 		reprint(text_editor_buffer, current_byte)
-		if (8*len(text_editor_buffer)+len(current_byte)) % 48 == 0:
+		if (8*len(text_editor_buffer)+len(current_byte)) % 32 == 0:
 			print()
 
 		hid_buffer = ""
@@ -128,7 +128,7 @@ while True:
 			current_byte = ""
 
 		reprint(text_editor_buffer, current_byte)
-		if (8*len(text_editor_buffer)+len(current_byte)) % 48 == 0:
+		if (8*len(text_editor_buffer)+len(current_byte)) % 32 == 0:
 			print()
 
 		hid_buffer = ""
