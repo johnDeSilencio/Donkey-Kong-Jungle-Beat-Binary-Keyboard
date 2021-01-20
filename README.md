@@ -4,7 +4,7 @@
 
 A lightweight and exploratory application of the classic Gamecube DK Bongo Drums for writing binary ARM instructions on the Raspberry Pi.
 
-Have you ever felt like assembly was too abstract a programming language? Have you ever wanted to get as close to the metal as you possibly could? Look no further! Using your DK Bongo Drums, a Gamecube adapter, and this custom application, you'll be writing raw ARM instructions for the Raspberry Pi in no time!
+Have you ever felt like assembly was too abstract a programming language? Have you ever wanted to get as close to the metal as you possibly could? Look no further! Using your DK Bongo Drums, a Gamecube adapter, and this custom application, you'll be impressing your friends with raw ARM instructions for the Raspberry Pi in no time!
 
 ### Background and Inspiration
 
@@ -43,4 +43,4 @@ If you hit the back right bongo three times, it will exit the text editor and at
 
 ---
 
-You're on your own now. To familiarize yourself with opcode encodings for ARM assembly, I recommend assembling test code withthe GNU assembler, ```as```. If you examine the assembled object files with ```objdump```, you can see how those assembly instructions are encoded directly.
+You're on your own now. To familiarize yourself with opcode encodings for ARM assembly, I recommend assembling test code withthe GNU assembler, ```as```. If you examine the assembled object files with ```objdump```, you can see how those assembly instructions are encoded directly. Best of luck, my friends.
