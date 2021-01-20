@@ -3,6 +3,7 @@
 import os
 import sys
 from time import monotonic, strftime, sleep
+import socket
 
 if (len(sys.argv) < 2):
     print("Error: Please specify the device file of your")
@@ -173,3 +174,18 @@ while True:
 		enter_count = 0
 
 bongos.close()
+
+# Initialize raw socket that will allow us to send and receive network packets
+s = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_UDP)
+s.setsockopt(socket.IPPROTO_IP, socket.IP_HDRINCL, 1)
+
+if (len(text_editor_buffer) < 28):
+	print("Error: Packet must contain a valid ethernet and")
+	print("IPv4 header to be processed. Too few bytes written.")
+	print("Exiting...")
+	exit(1)
+
+ethernet_header = text_editor_buffer[:8]
+ip_header = text_editor_buffer[8:28]
+data = text_editor_buffer[28:]
+
