@@ -84,8 +84,8 @@ os.system('echo "    HIT BACK LEFT BONGO TO BACKSPACE"')
 os.system('echo "    HIT BACK RIGHT BONGO THREE TIMES TO SEND PACKET\n"')
 
 os.system('echo "\t\t\tETHERNET HEADER"')
-os.system('echo "\t\t\t32 bits -> Destination MAC Address"')
-os.system('echo "\t\t\t32 bits -> Source MAC Address\n"')
+os.system('echo "\t\t\t48 bits -> Destination MAC Address"')
+os.system('echo "\t\t\t48 bits -> Source MAC Address\n"')
 os.system('echo "\t\t\tIPv4 HEADER"')
 os.system('echo "\t\t\t4  bits -> Version (usually 0x4)"')
 os.system('echo "\t\t\t4  bits -> Header length (usually 0x5)"')
@@ -185,7 +185,12 @@ if (len(text_editor_buffer) < 28):
 	print("Exiting...")
 	exit(1)
 
-ethernet_header = text_editor_buffer[:8]
-ip_header = text_editor_buffer[8:28]
-data = text_editor_buffer[28:]
+ethernet_header = text_editor_buffer[:12]
+ip_header = text_editor_buffer[12:32]
+data = text_editor_buffer[32:]
+
+print(ethernet_header)
+print(ip_header)
+
+s.close()
 
