@@ -13,6 +13,10 @@ if (len(sys.argv) < 2):
     exit(1)
 
 bongo_dev_file = sys.argv[1]
+SAVE_FILE = ""
+
+if (len(sys.argv) > 2 and os.path.exists(sys.argv[2])):
+	SAVE_FILE = sys.argv[2]
 
 """
 	Given an array of bytes and a string
@@ -58,10 +62,8 @@ def ip_checksum(packet_bytearray):
     # add back carry outs from the top 16 bits to the bottom 16 bits
     sum = (sum >> 16) + (sum & 0xffff)
     sum += (sum >> 16)
-    sum = (sum >> 16) + (sum & 0xffff)
-    sum += (sum >> 16)
     sum = ~sum
-    return bytearray([sum >> 8, sum & 0xff])
+    return bytearray([(sum & 0xff00) >> 8, sum & 0xff])
 
 
 # amount of time until bongo will register hit again
@@ -111,6 +113,18 @@ os.system('echo "\t\t\t16 bits -> Checksum\n"')
 os.system('echo "01234567 01234567 01234567 01234567"')
 os.system('printf "\033[0m"')
 os.system('echo "\n"')
+
+if (SAVE_FILE != ""):
+	with open(SAVE_FILE, "rb") as save_file:
+		# Read in file byte by byte and store in bytearray buffer
+		text_editor_buffer = bytearray()
+		for byte in save_file.read():
+			text_editor_buffer.append(byte)
+		# Print the bytes to the text editor screen
+		for line in range(0, int(len(text_editor_buffer) / 4)):
+			reprint(text_editor_buffer[4*line:4*line+4], current_byte)
+			print("")
+		reprint(text_editor_buffer[-(len(text_editor_buffer)%4):], current_byte)
 
 while True:
 	hid_buffer += bongos.read(2).hex()
@@ -188,7 +202,7 @@ bongos.close()
 save_file = open("network_bongo_saves/" + strftime("%Y_%m_%d_%H%M%S") + ".cap", "wb")
 
 for byte in text_editor_buffer:
-	save_file.write(byte)
+	save_file.write(bytearray([byte]))
 
 save_file.close()
 
@@ -225,9 +239,14 @@ pseudo_header = source + destination + protocol
 ip_header[10:12] = ip_checksum(ip_header)
 udp_header[6:8] = ip_checksum(pseudo_header + udp_header + datagram)
 
+print("")
 print(ethernet_header.hex(), "\n")
 print(ip_header.hex(), "\n")
 print(udp_header.hex(), "\n")
 
-s.close()
+packet = ethernet_header + ip_header + udp_header + datagram
+
+s.sendto(packet, ('69.28.91.73', 123))
+
+#s.close()
 
