@@ -207,8 +207,8 @@ for byte in text_editor_buffer:
 save_file.close()
 
 # Initialize raw socket that will allow us to send and receive network packets
-s = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_UDP)
-s.setsockopt(socket.IPPROTO_IP, socket.IP_HDRINCL, 1)
+s = socket.socket(socket.AF_PACKET, socket.SOCK_RAW)
+s.bind(("wlan0", 0))
 
 if (len(text_editor_buffer) < 42):
 	print("Error: Packet must contain a valid ethernet and")
@@ -246,7 +246,7 @@ print(udp_header.hex(), "\n")
 
 packet = ethernet_header + ip_header + udp_header + datagram
 
-s.sendto(packet, ('69.28.91.73', 123))
-
-#s.close()
+s.send(packet)
+print(s.recvfrom(65565))
+s.close()
 
