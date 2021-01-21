@@ -58,7 +58,10 @@ def ip_checksum(packet_bytearray):
     # add back carry outs from the top 16 bits to the bottom 16 bits
     sum = (sum >> 16) + (sum & 0xffff)
     sum += (sum >> 16)
-    return ~sum
+    sum = (sum >> 16) + (sum & 0xffff)
+    sum += (sum >> 16)
+    sum = ~sum
+    return bytearray([sum >> 8, sum & 0xff])
 
 
 # amount of time until bongo will register hit again
@@ -83,11 +86,11 @@ os.system('echo "    RIGHT BONGO = 1"')
 os.system('echo "    HIT BACK LEFT BONGO TO BACKSPACE"')
 os.system('echo "    HIT BACK RIGHT BONGO THREE TIMES TO SEND PACKET\n"')
 
-os.system('echo "\t\t\tETHERNET HEADER"')
+os.system('echo "\t\tETHERNET HEADER"')
 os.system('echo "\t\t\t48 bits -> Destination MAC Address"')
 os.system('echo "\t\t\t48 bits -> Source MAC Address"')
 os.system('echo "\t\t\t8  bits -> Type (usually 0x08000 for IPv4)\n"')
-os.system('echo "\t\t\tIPv4 HEADER"')
+os.system('echo "\t\tIPv4 HEADER"')
 os.system('echo "\t\t\t4  bits -> Version (usually 0x4)"')
 os.system('echo "\t\t\t4  bits -> Header length (usually 0x5)"')
 os.system('echo "\t\t\t8  bits -> Type of service (usually 0x00)"')
@@ -95,10 +98,15 @@ os.system('echo "\t\t\t16 bits -> Total length (in bytes)"')
 os.system('echo "\t\t\t16 bits -> Idenitifcation # (must be unique between packets)"')
 os.system('echo "\t\t\t16 bits -> Flags (Reserved bit (0), Don\'t Fragment, More Fragments, and Fragment Offset #)"')
 os.system('echo "\t\t\t8  bits -> TTL (time to live)"')
-os.system('echo "\t\t\t8  bits -> Protocol (TCP is 6, UDP is 17)"')
+os.system('echo "\t\t\t8  bits -> Protocol (TCP is 0x0006, UDP is 0x0011)"')
 os.system('echo "\t\t\t16 bits -> Header checksum"')
 os.system('echo "\t\t\t32 bits -> Source IPv4 address"')
 os.system('echo "\t\t\t32 bits -> Destination IPv4 address\n"')
+os.system('echo "\t\tUDP HEADER"')
+os.system('echo "\t\t\t16 bits -> Source port"')
+os.system('echo "\t\t\t16 bits -> Destination port"')
+os.system('echo "\t\t\t16 bits -> Length"')
+os.system('echo "\t\t\t16 bits -> Checksum\n"')
 
 os.system('echo "01234567 01234567 01234567 01234567"')
 os.system('printf "\033[0m"')
@@ -180,18 +188,38 @@ bongos.close()
 s = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_UDP)
 s.setsockopt(socket.IPPROTO_IP, socket.IP_HDRINCL, 1)
 
-if (len(text_editor_buffer) < 28):
+if (len(text_editor_buffer) < 42):
 	print("Error: Packet must contain a valid ethernet and")
 	print("IPv4 header to be processed. Too few bytes written.")
 	print("Exiting...")
+	s.close()
 	exit(1)
 
 ethernet_header = text_editor_buffer[:14]
 ip_header = text_editor_buffer[14:34]
-data = text_editor_buffer[34:]
+udp_header = text_editor_buffer[34:42]
+datagram = text_editor_buffer[42:]
 
-print(ethernet_header)
-print(ip_header)
+# Calculate lengths for header
+ip_length = len(ip_header) + len(udp_header) + len(datagram)
+ip_header[2:4] = bytearray([ip_length >> 8, ip_length & 0xff])
+
+udp_length = len(udp_header) + len(datagram)
+udp_header[4:6] = bytearray([udp_length >> 8, udp_length & 0xff])
+
+# Construct pseudo header for UDP checksum calculation
+source = ip_header[12:16]
+destination = ip_header[16:20]
+protocol = udp_header[9:11]
+pseudo_header = source + destination + protocol
+
+# Calculate checksums for headers
+ip_header[10:12] = ip_checksum(ip_header)
+udp_header[6:8] = ip_checksum(pseudo_header + udp_header + datagram)
+
+print(ethernet_header.hex(), "\n")
+print(ip_header.hex(), "\n")
+print(udp_header.hex(), "\n")
 
 s.close()
 
