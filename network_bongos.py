@@ -184,6 +184,14 @@ while True:
 
 bongos.close()
 
+# Save written packet to a CAP file for later use
+save_file = open("network_bongo_saves/" + strftime("%Y_%m_%d_%H%M%S") + ".cap", "wb")
+
+for byte in text_editor_buffer:
+	save_file.write(byte)
+
+save_file.close()
+
 # Initialize raw socket that will allow us to send and receive network packets
 s = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_UDP)
 s.setsockopt(socket.IPPROTO_IP, socket.IP_HDRINCL, 1)
