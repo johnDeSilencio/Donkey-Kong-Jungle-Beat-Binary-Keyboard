@@ -4,6 +4,8 @@ import os
 import sys
 from time import monotonic, strftime, sleep
 import socket
+import binascii
+import uuid
 
 if (len(sys.argv) < 2):
     print("Error: Please specify the device file of your")
@@ -42,6 +44,25 @@ def reprint(byte_array, current_byte):
 		byte = (8 - len(byte)) * "0" + byte # pad with zeros if byte < 128
 		print(byte + " ", end='')
 	print(current_byte)
+
+
+def GetSMAC(packet):
+	return binascii.hexlify(packet[6:12]).decode()
+
+def GetDMAC(packet):
+	return binascii.hexlify(packet[0:6]).decode()
+
+def GetEtherType(packet):
+	return binascii.hexlify(packet[12:14]).decode()
+
+def GetIP(packet):
+	return binascii.hexlify(packet[14:34]).decode()
+
+def GetUDP(packet):
+	return binascii.hexlify(packet[34:42]).decode()
+
+def GetPayload(packet):
+	return binascii.hexlify(packet[42:]).decode()
 
 
 def ip_checksum(packet_bytearray):
@@ -139,6 +160,7 @@ while True:
 			break
 
 		hid_buffer = ""
+
 		last_bongo_clap = monotonic()
 	elif (hid_buffer[-4:] == "0108" and (monotonic() - last_bongo_clap > bongo_clap_length)):
 		# front right bongo hit, so insert 1 in text editor
@@ -207,8 +229,9 @@ for byte in text_editor_buffer:
 save_file.close()
 
 # Initialize raw socket that will allow us to send and receive network packets
-s = socket.socket(socket.AF_PACKET, socket.SOCK_RAW)
-s.bind(("wlan0", 0))
+host = socket.gethostbyname(socket.gethostname())
+s = socket.socket(socket.AF_PACKET, socket.SOCK_RAW, socket.htons(3))
+s.bind(("wlan0", 3))
 
 if (len(text_editor_buffer) < 42):
 	print("Error: Packet must contain a valid ethernet and")
@@ -217,36 +240,60 @@ if (len(text_editor_buffer) < 42):
 	s.close()
 	exit(1)
 
-ethernet_header = text_editor_buffer[:14]
-ip_header = text_editor_buffer[14:34]
-udp_header = text_editor_buffer[34:42]
-datagram = text_editor_buffer[42:]
+packet = text_editor_buffer
+
+ethernet_header = packet[:14]
+ip_header = packet[14:34]
+udp_header = packet[34:42]
+datagram = packet[42:]
 
 # Calculate lengths for header
 ip_length = len(ip_header) + len(udp_header) + len(datagram)
-ip_header[2:4] = bytearray([ip_length >> 8, ip_length & 0xff])
+ip_length = bytearray([ip_length >> 8, ip_length & 0xff])
+ip_header[2:4] = ip_length
 
 udp_length = len(udp_header) + len(datagram)
-udp_header[4:6] = bytearray([udp_length >> 8, udp_length & 0xff])
+udp_length = bytearray([udp_length >> 8, udp_length & 0xff])
+udp_header[4:6] = udp_length
 
 # Construct pseudo header for UDP checksum calculation
 source = ip_header[12:16]
 destination = ip_header[16:20]
-protocol = udp_header[9:11]
-pseudo_header = source + destination + protocol
+protocol = ip_header[9:10]
+pseudo_header = source + destination + bytearray([0]) + protocol + udp_length
 
 # Calculate checksums for headers
 ip_header[10:12] = ip_checksum(ip_header)
 udp_header[6:8] = ip_checksum(pseudo_header + udp_header + datagram)
 
-print("")
-print(ethernet_header.hex(), "\n")
-print(ip_header.hex(), "\n")
-print(udp_header.hex(), "\n")
-
 packet = ethernet_header + ip_header + udp_header + datagram
 
+print("SENT PACKET:\n")
+print("Destination MAC:\t",GetDMAC(packet))
+print("Source MAC:\t\t",GetSMAC(packet))
+print("IP Version:\t\t",GetEtherType(packet))
+print("IP Header:\t\t",GetIP(packet))
+print("UDP Header:\t\t",GetUDP(packet))
+print("Payload:\n")
+print(GetPayload(packet),"\n")
+
+mac_address = uuid.getnode()
+mac_address = "000" + hex(mac_address)[2:]
+
 s.send(packet)
-print(s.recvfrom(65565))
+packet = s.recvfrom(65565)
+packet = packet[0]
+
+while (GetDMAC(packet) != mac_address or GetUDP(packet)[:4] != "007b"):
+	packet = s.recvfrom(65565)
+	packet = packet[0]
+
+print("RECEIVED PACKET:\n")
+print("Destination MAC:\t", GetDMAC(packet))
+print("Source MAC:\t\t",GetSMAC(packet))
+print("IP Version:\t\t",GetEtherType(packet))
+print("IP Header:\t\t",GetIP(packet))
+print("UDP Header:\t\t",GetUDP(packet))
+print("Payload:\n\n",GetPayload(packet))
 s.close()
 
