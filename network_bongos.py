@@ -48,13 +48,26 @@ else:
 
 if (args.filename == None):
 	print("Creating an empty text editor...")
-elif (args.filename != None and not os.path.exists(args.filename)):
+elif (not os.path.exists(args.filename)):
 	print("Error: binary file \"{0}\" does not exist.".format(args.filename))
 	print("Exiting...")
 	exit(1)
 else:
 	print("Loading \"{0}\" into the text editor...".format(args.filename))
 	LOAD_FILE = args.filename
+
+if (args.save == None):
+	os.system('printf "\033[0;33m')
+	print("WORK WILL NOT BE SAVED")
+	os.system('printf "\033[0m"')
+elif (os.path.exists(args.filename)):
+	SAVE_FILE = args.save
+	os.system('printf "\033[0;33m')
+	print("OVERWRITING \"{0}\"".format(SAVE_FILE))
+	os.system('printf "\033[0m"')
+else:
+	SAVE_FILE = args.save
+	print("Work will be saved in \"{0}\"...".format(SAVE_FILE))
 
 exit(0)
 
