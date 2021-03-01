@@ -21,21 +21,39 @@ use the default keyboard '0', '1', 'backspace', and 'enter' keys instead."""
 parser = argparse.ArgumentParser(description=description)
 mode = parser.add_mutually_exclusive_group()
 
-parser.add_argument('/dev/hidrawX', help='device file of bongo drums')
-parser.add_argument('filename', help='binary file to load into editor')
-mode.add_argument('-x', '--executable', help='interpret and execute binary as 32-bit ARM instructions', action='store_true')
-mode.add_argument('-n', '--network', help='interpret and send binary as UDP packet', action='store_true')
+parser.add_argument('-d', '--devfile', help='device file of bongo drums, e.g. /dev/hidraw0')
+parser.add_argument('-f', '--filename', help='binary file to load into editor')
+mode.add_argument('-x', '--executable', help='Instruction editor mode. Interpret and execute binary as 32-bit ARM instructions', action='store_true')
+mode.add_argument('-n', '--network', help='Packet editor mode. Interpret and send binary as UDP packet', action='store_true')
 parser.add_argument('-s', '--save', help='save binary to the given file')
 
+# Parse arguments and validate command-line inputs
+
+args = parser.parse_args()
+
+bongo_dev_file = ""
+SAVE_FILE = ""
+
+if (args.devfile == None):
+	print("No bongo drums! Using default keyboard...")
+elif (re.search("/dev/.*", args.devfile) == None or not os.path.exists(args.devfile)):
+	print("Error: Invalid device file for DK Bongo Drums.")
+	print("Device file should be of the form \"/dev/hidrawX\".")
+	print("Exiting...")
+else:
+	bongo_dev_file = args.devfile
+	print("Using bongos drums located at {0}".format(bongo_dev_file))
+
+exit(0)
+
+
 if (len(sys.argv) == 2 and re.search("/dev/.*", sys.argv[1]) == None):
-    print("Error: Please specify the device file of your")
-    print("DK Bongo Drums.")
+    
     parser.parse_args()
     exit(1)
 
 
-bongo_dev_file = sys.argv[1]
-SAVE_FILE = ""
+
 
 if (len(sys.argv) > 2 and os.path.exists(sys.argv[2])):
 	SAVE_FILE = sys.argv[2]
