@@ -32,6 +32,7 @@ parser.add_argument('-s', '--save', help='save binary to the given file')
 args = parser.parse_args()
 
 bongo_dev_file = ""
+LOAD_FILE = ""
 SAVE_FILE = ""
 
 if (args.devfile == None):
@@ -40,9 +41,20 @@ elif (re.search("/dev/.*", args.devfile) == None or not os.path.exists(args.devf
 	print("Error: Invalid device file for DK Bongo Drums.")
 	print("Device file should be of the form \"/dev/hidrawX\".")
 	print("Exiting...")
+	exit(1)
 else:
 	bongo_dev_file = args.devfile
-	print("Using bongos drums located at {0}".format(bongo_dev_file))
+	print("Using bongos drums located at {0}...".format(bongo_dev_file))
+
+if (args.filename == None):
+	print("Creating an empty text editor...")
+elif (args.filename != None and not os.path.exists(args.filename)):
+	print("Error: binary file \"{0}\" does not exist.".format(args.filename))
+	print("Exiting...")
+	exit(1)
+else:
+	print("Loading \"{0}\" into the text editor...".format(args.filename))
+	LOAD_FILE = args.filename
 
 exit(0)
 
