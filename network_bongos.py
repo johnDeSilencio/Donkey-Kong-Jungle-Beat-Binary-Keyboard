@@ -6,13 +6,33 @@ from time import monotonic, strftime, sleep
 import socket
 import binascii
 import uuid
+import re
+import argparse
 
-if (len(sys.argv) < 2):
+# Initialize CLI argument parser
+description = """
+A binary text editor that uses the DK Bongos from \"Donkey Kong
+Jungle Beat\" as a binary keyboard, either for writing raw, executable
+ARM instructions or raw UDP packets with Ethernet, IP, and UDP headers.
+
+To use the bongo drums, provide their device file as a command-line
+argument. Running the program without a command-line argument will
+use the default keyboard '0', '1', 'backspace', and 'enter' keys instead."""
+parser = argparse.ArgumentParser(description=description)
+mode = parser.add_mutually_exclusive_group()
+
+parser.add_argument('/dev/hidrawX', help='device file of bongo drums')
+parser.add_argument('filename', help='binary file to load into editor')
+mode.add_argument('-x', '--executable', help='interpret and execute binary as 32-bit ARM instructions', action='store_true')
+mode.add_argument('-n', '--network', help='interpret and send binary as UDP packet', action='store_true')
+parser.add_argument('-s', '--save', help='save binary to the given file')
+
+if (len(sys.argv) == 2 and re.search("/dev/.*", sys.argv[1]) == None):
     print("Error: Please specify the device file of your")
-    print("DK Bongo Drums. For example:\n")
-    print("\tsudo python3 network_bongos.py /dev/hidraw2\n")
-    print("Exiting...")
+    print("DK Bongo Drums.")
+    parser.parse_args()
     exit(1)
+
 
 bongo_dev_file = sys.argv[1]
 SAVE_FILE = ""
