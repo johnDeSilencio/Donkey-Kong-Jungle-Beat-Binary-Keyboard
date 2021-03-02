@@ -8,6 +8,8 @@ import binascii
 import uuid
 import re
 import argparse
+from network_bongo_methods import *
+from bongo_methods import *
 
 # Initialize CLI argument parser
 description = """
@@ -26,6 +28,7 @@ parser.add_argument('-f', '--filename', help='binary file to load into editor')
 mode.add_argument('-x', '--executable', help='Instruction editor mode. Interpret and execute binary as 32-bit ARM instructions', action='store_true')
 mode.add_argument('-n', '--network', help='Packet editor mode. Interpret and send binary as UDP packet', action='store_true')
 parser.add_argument('-s', '--save', help='save binary to the given file')
+parser.add_argument('-i', '--header-info', help='display helpful information for writing ARM or packet headers', action='store_true')
 
 # Parse arguments and validate command-line inputs
 
@@ -60,7 +63,7 @@ if (args.save == None):
 	os.system('printf "\033[0;33m')
 	print("WORK WILL NOT BE SAVED")
 	os.system('printf "\033[0m"')
-elif (os.path.exists(args.filename)):
+elif (os.path.exists(args.save)):
 	SAVE_FILE = args.save
 	os.system('printf "\033[0;33m')
 	print("OVERWRITING \"{0}\"".format(SAVE_FILE))
@@ -69,134 +72,34 @@ else:
 	SAVE_FILE = args.save
 	print("Work will be saved in \"{0}\"...".format(SAVE_FILE))
 
-exit(0)
 
+# Declare and define variables used for the editro logic
 
-if (len(sys.argv) == 2 and re.search("/dev/.*", sys.argv[1]) == None):
-    
-    parser.parse_args()
-    exit(1)
+bongo_clap_length = 0.2 # delay between successive bongo claps
 
+# Device file for reading binary keyboard input
+bongos = None
+if (bongo_dev_file != ""):
+	# device file of the bongo drums
+	bongos = open(bongo_dev_file, "rb")
+else:
+	# device file of the default keyboard
+	bongos = open("/dev/input/event2", "rb")
 
-
-
-if (len(sys.argv) > 2 and os.path.exists(sys.argv[2])):
-	SAVE_FILE = sys.argv[2]
-
-"""
-	Given an array of bytes and a string
-	representation of the current byte,
-	will clear the current line and reprint it
-"""
-def reprint(byte_array, current_byte):
-	# put cursor up one line
-	os.system('printf "\\033[1A"')
-	# delete current printed line
-	os.system('printf "\\033[K"')
-
-
-	# reprint current line without deleted bit
-	current_line_bytes = len(byte_array) % 4
-
-	if len(byte_array) > 0 and len(byte_array) % 4 == 0 and len(current_byte) == 0:
-		# special case: line has full instruction, 32 bits
-		current_line_bytes = 4
-
-	for i in range(len(byte_array) - current_line_bytes, len(byte_array)):
-		byte = "{0:b}".format(byte_array[i])
-		byte = (8 - len(byte)) * "0" + byte # pad with zeros if byte < 128
-		print(byte + " ", end='')
-	print(current_byte)
-
-
-def GetSMAC(packet):
-	return binascii.hexlify(packet[6:12]).decode()
-
-def GetDMAC(packet):
-	return binascii.hexlify(packet[0:6]).decode()
-
-def GetEtherType(packet):
-	return binascii.hexlify(packet[12:14]).decode()
-
-def GetIP(packet):
-	return binascii.hexlify(packet[14:34]).decode()
-
-def GetUDP(packet):
-	return binascii.hexlify(packet[34:42]).decode()
-
-def GetPayload(packet):
-	return binascii.hexlify(packet[42:]).decode()
-
-
-def ip_checksum(packet_bytearray):
-    bytes_left = len(packet_bytearray)
-    sum = 0
-
-    # add header bytes to sum two bytes at a time
-    while (bytes_left > 1):
-        lower_short_boundary = len(packet_bytearray) - bytes_left
-        upper_short_boundary = len(packet_bytearray) - bytes_left + 2
-        sum += int(packet_bytearray[lower_short_boundary:upper_short_boundary].hex(), 16)
-        bytes_left -= 2    # process two bytes at a time
-
-    # if there is one byte left, make sure to add it too
-    if (bytes_left == 1):
-        sum += int(packet_bytearray[-1:].hex(), 16)
-
-    # add back carry outs from the top 16 bits to the bottom 16 bits
-    sum = (sum >> 16) + (sum & 0xffff)
-    sum += (sum >> 16)
-    sum = ~sum
-    return bytearray([(sum & 0xff00) >> 8, sum & 0xff])
-
-
-# amount of time until bongo will register hit again
-bongo_clap_length = 0.2
-
-bongos = open(bongo_dev_file, "rb")
-hid_buffer = ""
 last_bongo_clap = monotonic()
 
 text_editor_buffer = bytearray()
 current_byte = ""
 enter_count = 0
 
-# clear screen for text editor
+# Clear screen for text editor
 os.system("clear")
 
-# display text editor banner
-os.system('printf "\033[0;33m"')
-os.system('echo "[*] DK BONGO DRUM BINARY TEXT EDITOR [*]"')
-os.system('echo "    LEFT  BONGO = 0"')
-os.system('echo "    RIGHT BONGO = 1"')
-os.system('echo "    HIT BACK LEFT BONGO TO BACKSPACE"')
-os.system('echo "    HIT BACK RIGHT BONGO THREE TIMES TO SEND PACKET\n"')
+# display text editor banner with helpful information
+if (args.network and args.header_info):
+	display_network_header_info()
 
-os.system('echo "\t\tETHERNET HEADER"')
-os.system('echo "\t\t\t48 bits -> Destination MAC Address"')
-os.system('echo "\t\t\t48 bits -> Source MAC Address"')
-os.system('echo "\t\t\t8  bits -> Type (usually 0x08000 for IPv4)\n"')
-os.system('echo "\t\tIPv4 HEADER"')
-os.system('echo "\t\t\t4  bits -> Version (usually 0x4)"')
-os.system('echo "\t\t\t4  bits -> Header length (usually 0x5)"')
-os.system('echo "\t\t\t8  bits -> Type of service (usually 0x00)"')
-os.system('echo "\t\t\t16 bits -> Total length (in bytes)"')
-os.system('echo "\t\t\t16 bits -> Idenitifcation # (must be unique between packets)"')
-os.system('echo "\t\t\t16 bits -> Flags (Reserved bit (0), Don\'t Fragment, More Fragments, and Fragment Offset #)"')
-os.system('echo "\t\t\t8  bits -> TTL (time to live)"')
-os.system('echo "\t\t\t8  bits -> Protocol (TCP is 0x0006, UDP is 0x0011)"')
-os.system('echo "\t\t\t16 bits -> Header checksum"')
-os.system('echo "\t\t\t32 bits -> Source IPv4 address"')
-os.system('echo "\t\t\t32 bits -> Destination IPv4 address\n"')
-os.system('echo "\t\tUDP HEADER"')
-os.system('echo "\t\t\t16 bits -> Source port"')
-os.system('echo "\t\t\t16 bits -> Destination port"')
-os.system('echo "\t\t\t16 bits -> Length"')
-os.system('echo "\t\t\t16 bits -> Checksum\n"')
-
-os.system('echo "01234567 01234567 01234567 01234567"')
-os.system('printf "\033[0m"')
-os.system('echo "\n"')
+exit(0)
 
 if (SAVE_FILE != ""):
 	with open(SAVE_FILE, "rb") as save_file:
@@ -211,9 +114,13 @@ if (SAVE_FILE != ""):
 		reprint(text_editor_buffer[-(len(text_editor_buffer)%4):], current_byte)
 
 while True:
-	hid_buffer += bongos.read(2).hex()
+	if (bongo_dev_file != "")
+		input = get_binary_bongo_input(bongos)
 
-	if (hid_buffer[-4:] == "0104" and (monotonic() - last_bongo_clap > bongo_clap_length)):
+	if (monotonic() - last_bongo_clap > bongo_clap_length):
+		# delay before checking input again
+		continue
+	if (input == "\n"):
 		# back right bongo hit, so insert newline in text editor
 		enter_count += 1
 
@@ -222,10 +129,8 @@ while True:
 			# exit while loop to write buffer to send packet if possible
 			break
 
-		hid_buffer = ""
-
 		last_bongo_clap = monotonic()
-	elif (hid_buffer[-4:] == "0108" and (monotonic() - last_bongo_clap > bongo_clap_length)):
+	elif (input == "1"):
 		# front right bongo hit, so insert 1 in text editor
 
 		current_byte += "1"
@@ -239,10 +144,9 @@ while True:
 		if (8*len(text_editor_buffer)+len(current_byte)) % 32 == 0:
 			print()
 
-		hid_buffer = ""
 		last_bongo_clap = monotonic()
 		enter_count = 0
-	elif (hid_buffer[-4:] == "0101" and (monotonic() - last_bongo_clap > bongo_clap_length)):
+	elif (input == "0"):
 		# front left bongo hit, so insert 0 in text editor
 
 		current_byte += "0"
@@ -256,10 +160,9 @@ while True:
 		if (8*len(text_editor_buffer)+len(current_byte)) % 32 == 0:
 			print()
 
-		hid_buffer = ""
 		last_bongo_clap = monotonic()
 		enter_count = 0
-	elif (hid_buffer[-4:] == "0102" and (monotonic() - last_bongo_clap > bongo_clap_length)):
+	elif (input == "\x08"):
 		# back left bongo hit, so remove last character in text editor
 
 		if len(current_byte) == 0:
@@ -277,7 +180,6 @@ while True:
 			os.system('printf "\\033[K"')
 
 		reprint(text_editor_buffer, current_byte)
-		hid_buffer = ""
 		last_bongo_clap = monotonic()
 		enter_count = 0
 
