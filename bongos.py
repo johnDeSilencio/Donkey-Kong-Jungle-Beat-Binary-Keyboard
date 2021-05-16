@@ -3,8 +3,9 @@
 import sys
 import os
 from time import monotonic, strftime, sleep
+import re
 
-if (len(sys.argv) < 2):
+if (len(sys.argv) == 2 and re.search("/dev/.*", sys.argv[1]) == None):
 	print("Error: Please specify the device file of your")
 	print("DK Bongo Drums. For example:\n")
 	print("\tsudo python3 bongos.py /dev/hidraw2\n")

@@ -26,7 +26,7 @@ mode = parser.add_mutually_exclusive_group()
 parser.add_argument('-d', '--devfile', help='device file of bongo drums, e.g. /dev/hidraw0')
 parser.add_argument('-f', '--filename', help='binary file to load into editor')
 mode.add_argument('-x', '--executable', help='Instruction editor mode. Interpret and execute binary as 32-bit ARM instructions', action='store_true')
-mode.add_argument('-n', '--network', help='Packet editor mode. Interpret and send binary as UDP packet', action='store_true')
+mode.add_argument('-n', '--network', help='Packet editor mode. Interpret and send binary input as UDP packet', action='store_true')
 parser.add_argument('-s', '--save', help='save binary to the given file')
 parser.add_argument('-i', '--header-info', help='display helpful information for writing ARM or packet headers', action='store_true')
 
@@ -60,12 +60,12 @@ else:
 	LOAD_FILE = args.filename
 
 if (args.save == None):
-	os.system('printf "\033[0;33m')
+	os.system('printf "\033[0;33m"')
 	print("WORK WILL NOT BE SAVED")
 	os.system('printf "\033[0m"')
 elif (os.path.exists(args.save)):
 	SAVE_FILE = args.save
-	os.system('printf "\033[0;33m')
+	os.system('printf "\033[0;33m"')
 	print("OVERWRITING \"{0}\"".format(SAVE_FILE))
 	os.system('printf "\033[0m"')
 else:
@@ -84,7 +84,7 @@ if (bongo_dev_file != ""):
 	bongos = open(bongo_dev_file, "rb")
 else:
 	# device file of the default keyboard
-	bongos = open("/dev/input/event2", "rb")
+	bongos = sys.stdin
 
 last_bongo_clap = monotonic()
 
@@ -98,8 +98,8 @@ os.system("clear")
 # display text editor banner with helpful information
 if (args.network and args.header_info):
 	display_network_header_info()
-
-exit(0)
+elif (args.executable and args.header_info):
+	display_executable_header_info()
 
 if (SAVE_FILE != ""):
 	with open(SAVE_FILE, "rb") as save_file:
@@ -113,14 +113,18 @@ if (SAVE_FILE != ""):
 			print("")
 		reprint(text_editor_buffer[-(len(text_editor_buffer)%4):], current_byte)
 
-while True:
-	if (bongo_dev_file != "")
-		input = get_binary_bongo_input(bongos)
+binary_input = ""
 
-	if (monotonic() - last_bongo_clap > bongo_clap_length):
+while True:
+	if (bongo_dev_file != ""):
+		binary_input = get_binary_bongo_input(bongos)
+	else:
+		binary_input = get_binary_keyboard_input(sys.stdin)
+	
+	if (monotonic() - last_bongo_clap < bongo_clap_length):
 		# delay before checking input again
 		continue
-	if (input == "\n"):
+	if (binary_input == "\n"):
 		# back right bongo hit, so insert newline in text editor
 		enter_count += 1
 
@@ -130,7 +134,7 @@ while True:
 			break
 
 		last_bongo_clap = monotonic()
-	elif (input == "1"):
+	elif (binary_input == "1"):
 		# front right bongo hit, so insert 1 in text editor
 
 		current_byte += "1"
@@ -146,7 +150,7 @@ while True:
 
 		last_bongo_clap = monotonic()
 		enter_count = 0
-	elif (input == "0"):
+	elif (binary_input == "0"):
 		# front left bongo hit, so insert 0 in text editor
 
 		current_byte += "0"
@@ -162,7 +166,7 @@ while True:
 
 		last_bongo_clap = monotonic()
 		enter_count = 0
-	elif (input == "\x08"):
+	elif (binary_input == "\x08"):
 		# back left bongo hit, so remove last character in text editor
 
 		if len(current_byte) == 0:
@@ -192,6 +196,8 @@ for byte in text_editor_buffer:
 	save_file.write(bytearray([byte]))
 
 save_file.close()
+
+"""
 
 # Initialize raw socket that will allow us to send and receive network packets
 host = socket.gethostbyname(socket.gethostname())
@@ -262,3 +268,4 @@ print("UDP Header:\t\t",GetUDP(packet))
 print("Payload:\n\n",GetPayload(packet))
 s.close()
 
+"""

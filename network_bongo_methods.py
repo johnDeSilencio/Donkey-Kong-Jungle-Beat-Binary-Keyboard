@@ -107,3 +107,15 @@ def display_network_header_info():
     os.system('echo "01234567 01234567 01234567 01234567"')
     os.system('printf "\033[0m"')
     os.system('echo "\n"')
+
+def display_executable_header_info():
+    os.system('printf "\033[0;33m"')
+    os.system('echo "[*] DK BONGO DRUM BINARY TEXT EDITOR [*]"')
+    os.system('echo "    LEFT  BONGO = 0"')
+    os.system('echo "    RIGHT BONGO = 1"')
+    os.system('echo "    HIT BACK LEFT BONGO TO BACKSPACE"')
+    os.system('echo "    HIT BACK RIGHT BONGO THREE TIMES TO ASSEMBLE AND RUN"')
+
+    os.system('echo "01234567 89012345 67890123 45678901"')
+    os.system('printf "\033[0m"')
+    os.system('echo "\n"')
